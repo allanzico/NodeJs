@@ -32,7 +32,7 @@ router.get('/add', function(req, res){
   
    if (!errors.isEmpty()) {
     console.log(errors);
-       res.render('add_article',
+       res.render('add-article',
         { 
          article:article,
          errors: errors.mapped()
