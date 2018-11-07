@@ -5,8 +5,22 @@ const router = express.Router();
 /** Bring in Article Models */
 let Article = require ('../models/article');
 
+/**Bring in Userer Model */
+let User = require ('../models/user');
+
+/**Acess control */
+function authenticated (req, res, next){
+  if(req.isAuthenticated()){
+    return next();
+
+  }else{
+    req.flash('danger', 'Please login');
+    res.redirect('/users/login');
+  }
+}
+
 /** Add get articles route */
-router.get('/add', function(req, res){
+router.get('/add', authenticated, function(req, res){
     res.render ('add-article', {
       title:'Add article'
     });
@@ -17,7 +31,6 @@ router.get('/add', function(req, res){
   router.post('/add',
    [
     check('title').isLength({min:1}).trim().withMessage('Title required'),
-    check('author').isLength({min:1}).trim().withMessage('Author required'),
     check('body').isLength({min:1}).trim().withMessage('Body required')
    ],
     (req,res,next)=>{
@@ -40,12 +53,12 @@ router.get('/add', function(req, res){
      }
      else{
     article.title = req.body.title;
-    article.author = req.body.author;
+    article.author = req.user._id;
     article.body = req.body.body;
   
     article.save(err=>{
      if(err)throw err;
-     req.flash('success','New Article added by '+article.author);
+     req.flash('success','New Article added by '+ req.user.name);
      res.redirect('/');
     });
    }
@@ -54,15 +67,23 @@ router.get('/add', function(req, res){
   /** Get single Article route */
   router.get('/:id', function(req, res){
   Article.findById(req.params.id, function(err, article){
-  res.render('article',{
-    article:article
-  });
+    User.findById(article.author, function(err, user){
+      res.render('article',{
+        article:article,
+        author: user.name
+      });
+    });
+  
   });
   });
   
   /** Load Edit article form (GET)*/
-  router.get('/edit/:id', function(req, res){
+  router.get('/edit/:id', authenticated, function(req, res){
     Article.findById(req.params.id, function(err, article){
+      if(article.author != req.user._id){
+        req.flash('danger', 'Not authorized');
+        return res.redirect('/');
+      }
     res.render('edit-article',{
       title: "Edit Article",
       article:article
@@ -75,14 +96,12 @@ router.get('/add', function(req, res){
   router.post('/edit/:id',
   [
     check('title').isLength({min:1}).trim().withMessage('Title required'),
-    check('author').isLength({min:1}).trim().withMessage('Author required'),
     check('body').isLength({min:1}).trim().withMessage('Body required')
    ], function(req, res, next){
   
     
   let article = {}
   article.title = req.body.title;
-  article.author = req.body.author;
   article.body = req.body.body;
   
   //create a query to access article by id
@@ -110,13 +129,23 @@ router.get('/add', function(req, res){
   
   /**Delete article route */
   router.delete('/:id', function(req, res){
+    if(!req.user._id){
+      res.status(500).send();
+    }
     let query = {_id:req.params.id}
-    Article.remove(query, function(err){
-  if(err){
-    console.log(err);
-  }
-  res.send('Sucess');
+    Article.findById(req.params.id, function(err, article){
+      if(article.author != req.user._id){
+        res.status(500).send();
+      }else{
+        Article.remove(query, function(err){
+          if(err){
+            console.log(err);
+          }
+          res.send('Sucess');
+            });
+      }
     });
+   
   });
 
   module.exports = router;

@@ -8,9 +8,12 @@ const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const { check, validationResult } = require('express-validator/check');
 const { matchedData, sanitize } = require('express-validator/filter');
+const config = require ('./config/database');
+const passport = require('passport');
     
 
-mongoose.connect('mongodb://localhost/nodekb');
+//mongoose.connect('mongodb://localhost/nodekb');
+mongoose.connect(config.database);
 let db = mongoose.connection;
 
 //Check connection
@@ -62,6 +65,19 @@ app.use(function (req, res, next) {
   next();
 });
 
+//Import passport config
+require('./config/passport')(passport);
+
+//Passport Middle ware
+app.use(passport.initialize());
+app.use(passport.session());
+
+//Global variable for all URLs
+app.get('*', function(req, res, next){
+res.locals.user = req.user || null;
+next();
+})
+
 
 /** Home route */
 app.get('/', function(req, res){
@@ -80,7 +96,10 @@ Article.find({}, function(err, articles){
 
 //Router files 
 let articles = require ('./routes/articles');
+let users = require('./routes/users');
 app.use('/articles', articles);
+app.use('/users', users);
+
 
 //Start Server
 app.listen(port, hostname, function(){

@@ -1,4 +1,4 @@
-let mongoose = require('mongoose');
+const mongoose = require('mongoose');
 
 //Article schema
 
@@ -18,4 +18,5 @@ let articleSchema = new mongoose.Schema({
     }
 });
 
+//Export Model for use outside this file
 let Article = module.exports = mongoose.model('Article', articleSchema);
